@@ -1,0 +1,35 @@
+{
+  "kit_name": "Universal Project Startup Docs Kit",
+  "version": "2026-05-08",
+  "purpose": "Reusable AI-agent project startup docs generalized from prior complex projects.",
+  "core_principles": [
+    "clarity before code",
+    "thin UI/service core",
+    "state classification before persistence",
+    "explicit architecture selection",
+    "failure memory as part of fixes",
+    "published evidence immutability"
+  ],
+  "files": [
+    "ADR/ADR-0001-thin-ui-service-core.md",
+    "ADR/ADR-0002-state-classification-before-persistence.md",
+    "ADR/ADR-0003-explicit-architecture-selection.md",
+    "ADR/ADR-0004-publish-evidence-immutability.md",
+    "ADR/ADR-TEMPLATE.md",
+    "AGENTS.md",
+    "ARCHITECTURE_SELECTION.md",
+    "ASSUMPTIONS_AND_OPEN_QUESTIONS.md",
+    "BOOTSTRAP_QUESTIONNAIRE.md",
+    "DATA_MODEL.md",
+    "FAILURE_CATALOG.md",
+    "INDEX.md",
+    "PROJECT_BRIEF.md",
+    "QUALITY_GATES.md",
+    "README.md",
+    "RECOVERY_AND_RETENTION.md",
+    "RETROSPECTIVE.md",
+    "STATE_CLASSIFICATION.md",
+    "TEST_STRATEGY.md",
+    "WORKFLOW_TIMELINE.md"
+  ]
+}
