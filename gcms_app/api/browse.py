@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 
-from voc_scraper.browse_service import _browse_folder_worker, _browse_lock, _browse_results
+from gcms_app.services.browse_service import _browse_folder_worker, _browse_lock, _browse_results
 
 router = APIRouter(prefix="/api/browse", tags=["browse"])
 
