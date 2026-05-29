@@ -171,6 +171,26 @@ Single-editor lock ownership, heartbeat, timeout, and override behavior must be 
 10. Architecture guardrail
 Do not solve workflow, persistence, routing, publish/reopen, review ownership, or concurrency problems with UI-local patches unless the docs explicitly support that design. Prefer service/domain/persistence fixes over presentation-layer workarounds.
 
+11. Trinity modules must never import FastAPI, Streamlit, or any HTTP/UI
+    framework. Any such import is a boundary violation and must be removed
+    before merge.
+
+12. Trinity modules must never read from HTTP request state, session objects,
+    or environment-inferred identity. All caller context (actor, reason,
+    workstation) must be passed as explicit function parameters.
+
+13. Trinity service functions return plain Python objects. They must not return
+    HTTP response objects, status codes, or serialized JSON. Callers own
+    serialization.
+
+14. Every Trinity module must be importable and every Trinity service function
+    must be testable using plain `pytest` with no running server, no browser,
+    and no UI framework installed.
+
+15. If a proposed module needs routing, rendering, sessions, or request context
+    to function, that is a design error. Redesign the boundary so Trinity
+    receives only what it needs as explicit parameters.
+
 Technology Selection Rules
 
 UI, persistence, deployment, auth/session, and concurrency design must be chosen explicitly and documented before implementation.
@@ -400,6 +420,9 @@ Files changed
 Tests added or updated
 What is now proven
 Remaining risks or unverified surfaces
+No web framework imports introduced into Trinity modules
+All new service functions accept caller identity as explicit parameters
+New modules are pytest-testable without a running server
 
 This keeps code work aligned with the repository's documentation-first operating model.
 

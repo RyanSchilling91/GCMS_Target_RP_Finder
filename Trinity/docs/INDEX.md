@@ -2,9 +2,15 @@
 
 ## Purpose of this document
 
-Provide the reading order for the project documentation, explain what each document is for, and prevent implementation from drifting ahead of the system model.
+Provide the reading order for Trinity's documentation, explain what each document
+is for, and prevent implementation from drifting outside Trinity's package boundary.
 
-This file is the front door to the docs set. New contributors, AI coding agents, and future maintainers should start here before touching code.
+**Trinity is a pure Python backend package.** It has no UI, no routes, and no
+application entry point. This docs set governs what the package does, what its
+service API boundary is, and what must never happen inside it.
+
+New contributors, AI coding agents, and host-application developers should start
+here before calling or modifying Trinity.
 
 ---
 
@@ -43,8 +49,10 @@ Read these next to understand what architectural choices have been made and why.
 7. `ASSUMPTIONS_AND_OPEN_QUESTIONS.md`
    - Tracks what is still being assumed, what has already been resolved, and what remains open.
 
-8. `ADR/ADR-0001 - Use a Thin Presentation Layer with Shared-Storage Deployment as the Near-Term Baseline.md`
-   - Current UI/deployment baseline.
+8. `ADR-0001 - Use a Thin Presentation Layer with Shared-Storage Deployment as the Near-Term Baseline.md` **(ARCHIVED — NOT APPLICABLE)**
+   - Original presentation-layer decision. Archived. Trinity has no UI layer.
+   - The shared-storage deployment principle remains valid but governs the host
+     application, not this package.
 
 9. `ADR/ADR-0002 - Persist Mutable Working State with Version-Aware Rehydration and Keep Published Evidence Separate.md`
    - Persistence, versioning, and rehydration expectations.
@@ -100,6 +108,14 @@ These help a new person understand the repo quickly after the governing docs abo
 ---
 
 ## How to use this docs set
+
+### Before implementing any Trinity module
+Confirm all of the following before writing code:
+- `ARCHITECTURE_SELECTION.md` — service API boundary section
+- `AGENTS.md` — architecture rules 10–14
+- The module has no web framework imports
+- All caller context flows in as explicit function parameters
+- The module is testable with plain `pytest` and no server
 
 ### If you are planning work from scratch
 

@@ -3,10 +3,22 @@
 
 
 \## Status
+- \*\*Archived — Not Applicable\*\*
+- Original status: Accepted (superseded by ADR-0006 in host repo; not applicable
+  to Trinity because Trinity has no presentation layer)
 
-\- Accepted
-
-
+> \*\*Archive notice:\*\* Trinity is a pure Python backend package with no
+> presentation layer. This ADR was written when Trinity was incorrectly conceived
+> as a standalone application with a UI. It does not govern any aspect of
+> Trinity's current design.
+>
+> The shared-storage deployment stance and thin-layer architectural principle
+> remain valid — but they apply to the \*\*host application\*\*, not to Trinity
+> itself. See the host repo's own ADR-0001 and ADR-0006 for current presentation
+> and deployment decisions.
+>
+> Trinity's architectural boundaries are governed by ARCHITECTURE\_SELECTION.md
+> and ADR-0002 through ADR-0005.
 
 \## Decision
 

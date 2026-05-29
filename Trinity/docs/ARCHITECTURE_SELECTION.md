@@ -58,23 +58,24 @@ This draft is based on the current bootstrap questionnaire, project brief, workf
 
 \## Architecture stance
 
-The recommended architecture is a \*\*workflow-governed Python application core\*\* with a \*\*thin presentation layer\*\*, \*\*file-backed embedded persistence for working state\*\*, \*\*immutable published evidence packages\*\*, and \*\*single-editor concurrency controls\*\*.
+Trinity is a \*\*workflow-governed Python backend package\*\* with a \*\*pure Python
+service API\*\*, \*\*file-backed embedded persistence for working state\*\*, \*\*immutable
+published evidence packages\*\*, and \*\*single-editor concurrency controls\*\*.
 
+Trinity has no presentation layer. The architecture stance covers only what
+Trinity itself owns: the service/domain API boundary, persistence strategy,
+concurrency model, and evidence lifecycle.
 
+The host application's architecture (FastAPI, HTML frontend, deployment model,
+session handling) is governed by the host repo's own architecture docs and ADRs,
+not by Trinity's docs.
 
-The core design intent is not “keep the current app because it already exists.” The core design intent is:
-
-
-
-1\. keep the workflow truth in governed persisted objects
-
-2\. keep derived state disposable
-
-3\. keep evidence immutable
-
-4\. keep the UI replaceable
-
-5\. keep restricted-environment deployment practical
+The core design intent:
+1. Keep the workflow truth in governed persisted objects
+2. Keep derived state disposable and recomputable
+3. Keep evidence immutable after publish
+4. Keep the service API free of web framework concerns
+5. Keep restricted-environment deployment practical through file-backed storage
 
 
 
@@ -82,49 +83,42 @@ The core design intent is not “keep the current app because it already exists.
 
 
 
+\## Service API boundary
+
+All public Trinity service functions must:
+- Accept actor identity, action context, and all governance inputs as explicit
+  parameters — never infer them from environment, session, or framework state
+- Return plain Python objects (dataclasses, typed dicts, domain model instances)
+- Never import or reference FastAPI, Streamlit, or any HTTP/UI framework
+- Be fully testable with plain \`pytest\` and no running server
+
+This boundary is enforced by architecture rule, not by convention. Any Trinity
+module that violates it has the wrong scope and must be corrected before merge.
+
+\---
+
+\## ADR applicability in Trinity
+
+| ADR | Status | Notes |
+|-----|--------|-------|
+| ADR-0001 (Streamlit presentation layer) | Archived — not applicable | Trinity has no presentation layer |
+| ADR-0002 (file-backed persistence, version-aware rehydration) | Accepted | Persistence is Trinity's concern |
+| ADR-0003 (single-editor concurrency model) | Accepted | Locking is Trinity's concern |
+| ADR-0004 (publish immutability / reopen policy) | Accepted | Evidence lifecycle is Trinity's concern |
+| ADR-0005 (admin challenge bootstrap) | Accepted | Protected-action governance is Trinity's concern |
+| ADR-0006 (FastAPI + HTML frontend) | Does not belong in Trinity | File in host repo ADR set |
+
+\---
+
 \## UI options considered
 
+Not applicable. Trinity has no UI layer and owns no presentation concerns.
 
+UI, routing, frontend framework, and deployment decisions belong in the host
+repository's own ARCHITECTURE\_SELECTION and ADR set.
 
-\### Option
-
-\- Name: Thin Streamlit presentation layer over service/domain modules
-
-\- Why it fits: supports guided workflow screens, rapid iteration, and current environment constraints while allowing the real application logic to live outside the UI.
-
-\- Risks / drawbacks: rerun/session behavior can corrupt workflow semantics if UI state is treated as source truth.
-
-\- When this option is a bad fit: strict enterprise auth, highly concurrent multi-editor workflows, or very complex orchestration that depends on richer client/server state control.
-
-\- Architectural rule if chosen: the UI may render workflow state and invoke actions, but run lifecycle, matching, review, locking, persistence, publish validation, and authorization must all live in non-UI modules.
-
-
-
-\### Option
-
-\- Name: Desktop application shell over the same Python core
-
-\- Why it fits: could provide tighter workstation packaging and more explicit local-state handling if IT or user experience later demands it.
-
-\- Risks / drawbacks: increases packaging and maintenance burden without solving the main current problem, which is governed workflow correctness rather than desktop integration.
-
-\- When this option is a bad fit: when the team needs the fastest path to stabilize workflow behavior in a constrained environment.
-
-\- Notes: viable future renderer if UI portability is preserved from the start.
-
-
-
-\### Option
-
-\- Name: Full hosted web stack rewrite
-
-\- Why it fits: strongest future path for enterprise auth, central APIs, and higher-scale collaboration.
-
-\- Risks / drawbacks: major rewrite risk, delayed value, and misalignment with current deployment constraints. It also risks repeating the earlier failure mode of changing stack before workflow truth and state boundaries are fully stabilized.
-
-\- When this option is a bad fit: current restricted/offline environment and current project phase.
-
-\- Notes: deferred, not rejected forever.
+See the host repo's ADR-0006 (FastAPI + HTML browser frontend) for the
+accepted application-layer presentation decision.
 
 
 

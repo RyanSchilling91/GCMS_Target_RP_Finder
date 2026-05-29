@@ -4,11 +4,12 @@
 
 \## Purpose of this document
 
-Define the business purpose, users, scope boundaries, operating constraints, and success conditions for the project.
+Define the business purpose, users, scope boundaries, operating constraints, and
+success conditions for Trinity as a reusable backend package.
 
-
-
-This brief is written from the new bootstrap questionnaire and is intended to reset the project on clearer foundations. It does not assume the prior app design is the final answer. It preserves proven workflow lessons while removing the ambiguity that made the earlier build fragile under continued feature work.
+Trinity is a pure Python service/domain/persistence package. It is not a
+standalone application. This brief describes what Trinity governs, who calls it,
+and what the package must deliver — not how a UI or application is structured.
 
 
 
@@ -25,6 +26,32 @@ This brief is written from the new bootstrap questionnaire and is intended to re
 \- Source of truth for this draft: latest `BOOTSTRAP\_QUESTIONNAIRE.md`
 
 
+
+\---
+
+
+
+\## Package identity
+
+\*\*Trinity is:\*\* A reusable, plug-and-play pure Python backend package providing
+governed run lifecycle management, persistence, locking, review, audit, and
+immutable evidence packaging. It is designed to be dropped into any host
+repository that needs these capabilities.
+
+\*\*Trinity is not:\*\* A standalone application, a Streamlit app, a FastAPI service,
+or a deployable product. It has no routes, no UI, and no entry point.
+
+\*\*Caller contract:\*\* Host applications import Trinity and call its service
+functions. All actor identity, action context, and governance inputs are passed
+explicitly into Trinity's service API. Trinity never infers caller identity from
+session state, environment variables, or framework context.
+
+\*\*What lives in the host repo, not in Trinity:\*\*
+- FastAPI application and route handlers
+- HTML/CSS/JS frontend
+- Session and authentication handling
+- Deployment entry point and launcher
+- Application-level configuration and environment setup
 
 \---
 
@@ -218,7 +245,8 @@ The system should:
 
 7\. support controlled reopen-by-new-revision only
 
-8\. keep business logic and persistence behavior outside the UI layer so the UI can later be replaced if needed
+8\. expose a clean, stable Python service API so any host application or UI layer
+   can call Trinity without Trinity needing to know what that caller is
 
 
 
@@ -339,6 +367,9 @@ The project operates under real restrictions that affect design:
 \- workflow truth must not primarily live in UI session state
 
 \- business logic must remain portable outside the current UI framework
+
+\- Trinity must be importable and fully testable without a running web server,
+  browser, or UI framework. All caller context flows in as explicit parameters.
 
 
 
