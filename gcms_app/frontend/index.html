@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GCMS Target RP Discovery</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="usgs-mark"></div>
+    <div>
+      <span class="app-title">GCMS Target RP Discovery</span>
+      <span class="app-agency">GCMS Target RP Discovery</span>
+    </div>
+  </div>
+  <div class="topbar-right"></div>
+</div>
+
+<div class="home-layout">
+
+  <div class="card">
+    <h3>Open Batch</h3>
+    <p style="margin-bottom:12px;color:var(--text-muted);">Paste or type your .B folder path</p>
+    <div class="path-input-row">
+      <input type="text" id="batch-path" class="path-input" placeholder="/path/to/batch.B" />
+      <button class="btn-secondary" id="browse-btn">Browse</button>
+      <button class="btn-primary" id="load-btn">Load</button>
+    </div>
+    <div id="validation-msg" class="validation-msg"></div>
+    <pre id="load-result" style="display:none"></pre>
+  </div>
+
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+document.getElementById("browse-btn").addEventListener("click", async () => {
+  try {
+    const { request_id } = await apiPost("/api/browse/open", {});
+    pollBrowse(request_id);
+  } catch (e) { /* ignore */ }
+});
+
+async function pollBrowse(requestId) {
+  const res = await apiGet(`/api/browse/${requestId}`);
+  if (res.status === "ready") {
+    if (res.path) document.getElementById("batch-path").value = res.path;
+  } else {
+    setTimeout(() => pollBrowse(requestId), 500);
+  }
+}
+
+document.getElementById("load-btn").addEventListener("click", async () => {
+  const path = document.getElementById("batch-path").value.trim();
+  if (!path) { setMsg("Please enter a batch path.", "error"); return; }
+  setMsg("Validating…", "");
+  try {
+    const vRes = await apiPost("/api/batch/validate", { batch_path: path });
+    if (!vRes.valid) { setMsg(vRes.message || "Invalid path", "error"); return; }
+    setMsg("Loading batch data…", "");
+    const lRes = await apiPost("/api/batch/load", { batch_path: path });
+    setMsg("Batch loaded successfully.", "");
+    const resultEl = document.getElementById("load-result");
+    resultEl.style.display = "block";
+    resultEl.textContent = JSON.stringify(lRes, null, 2);
+  } catch (e) {
+    setMsg(e.message || "Load failed.", "error");
+  }
+});
+
+function setMsg(text, cls) {
+  const el = document.getElementById("validation-msg");
+  el.textContent = text;
+  el.className = "validation-msg" + (cls ? " " + cls : "");
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+</script>
+</body>
+</html>

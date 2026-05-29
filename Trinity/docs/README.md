@@ -1,316 +1,94 @@
-\# README.md
+# Trinity
 
+Trinity is a **reusable, plug-and-play Python backend package** providing
+governed workflow lifecycle management, run persistence, lock control, review
+and audit services, and immutable evidence packaging.
 
+Trinity is not an application. It is a pure Python service/domain/persistence
+library. It has no routes, no UI, and no entry point of its own. Any host
+application that needs governed run lifecycle management imports and calls Trinity.
 
-\## Project overview
+---
 
-This repository documents and supports the design of a \*\*workflow-governed laboratory application\*\* intended for restricted or professional environments where correctness, traceability, controlled review, and publish integrity matter more than fast prototype convenience.
+## What Trinity provides
 
+- Run lifecycle management (create, open, lock, transition, publish, reopen)
+- Working revision persistence with version-aware save/resume and rehydration
+- Planned sample set, raw upload, exclusion, and match domain services
+- Review claim, approval, rework, and audit event services
+- Immutable evidence package assembly and publish validation
+- Lock management, stale-lock recovery, and admin override services
+- Criteria configuration access and provenance tracking
 
+## What Trinity does not provide
 
-The project’s current implementation posture is:
+- HTTP routes or API endpoints
+- HTML rendering or any frontend
+- Session management or authentication token handling
+- Any awareness of the web framework used by its callers
+- An application entry point or launcher
 
+The host repository owns all of that. Trinity is a dependency of that
+application, not an application itself.
 
+---
 
-\- a \*\*Python application core\*\* that owns workflow logic, persistence rules, and governance behavior
+## How Trinity is used
 
-\- a \*\*thin presentation layer\*\* currently rendered through Streamlit
+A host repo imports Trinity as a Python package and calls its service functions
+from route handlers or service scripts. All caller context — actor identity,
+action reason, workstation ID — is passed explicitly into Trinity's service API.
+Trinity never infers caller identity from environment or session state.
 
-\- \*\*file-backed embedded persistence\*\* suitable for shared-storage deployment in constrained environments
+Example mental model:
 
-\- \*\*single-editor working revision locking\*\*
+```
+host_repo/
+├── app/
+│   ├── routes/        ← FastAPI route handlers — call Trinity services
+│   ├── scripts/       ← service scripts — call Trinity services
+│   └── ...
+└── trinity/           ← this package
+    ├── services/      ← workflow, lock, review, publish service modules
+    ├── persistence/   ← file-backed storage, rehydration, schema versioning
+    ├── domain/        ← run, revision, sample set, audit domain models
+    └── docs/          ← this documentation set
+```
 
-\- \*\*immutable published evidence packages\*\*
+---
 
-\- \*\*controlled re-entry\*\* from published evidence by creating a new working revision rather than editing published artifacts in place
+## Core package rules
 
+1. Trinity modules never import a web framework (FastAPI, Flask, Streamlit, etc.).
+2. Trinity modules never read from HTTP request state or session objects.
+3. All caller context is passed as explicit function parameters.
+4. Trinity service functions return plain Python objects — not HTTP responses.
+5. Every Trinity module is importable and testable with plain `pytest` and no
+   running server.
 
+Any violation of these rules is a boundary defect that must be fixed before merge.
 
-This repository is documentation-first by design. The docs are intended to prevent the project from repeating earlier failure modes where code, workflow, persistence, and architecture drifted apart.
+---
 
+## Workflow Trinity governs
 
+1. Create or open a run
+2. Complete the planned sample set
+3. Save working truth
+4. Upload instrument/raw data
+5. Save governed exclusions or row-drop decisions
+6. Rebuild and audit downstream matches/calculations
+7. Continue draft work or submit for review
+8. Independent reviewer claims and reviews the run
+9. Approved runs are published into an immutable evidence package
+10. Published evidence can re-enter workflow only through a new working revision —
+    never by editing the published artifact in place
 
-\---
+---
 
+## Documentation
 
+Start at `docs/INDEX.md`. Read before changing anything.
 
-\## What problem this project is solving
-
-The system is meant to replace fragile, hard-to-govern workflow behavior with a more defensible lifecycle for laboratory work.
-
-
-
-At a high level, the system must support:
-
-
-
-\- creating a new run from a planned sample set
-
-\- editing and saving working truth
-
-\- uploading and reconciling raw instrument data
-
-\- auditing downstream matching and calculation behavior
-
-\- handing work off for independent review
-
-\- approving and publishing governed outputs
-
-\- preserving immutable evidence after publish
-
-\- allowing controlled operational re-entry through a new working revision when necessary
-
-
-
-The project is not just building screens. It is building a durable workflow model.
-
-
-
-\---
-
-
-
-\## Core architectural stance
-
-This project should be understood as:
-
-
-
-\*\*workflow-governed Python core + thin UI\*\*
-
-
-
-not:
-
-
-
-\*\*UI app with some helper functions\*\*
-
-
-
-That distinction drives the design:
-
-
-
-\- workflow logic belongs in service/domain modules
-
-\- persisted truth must remain authoritative
-
-\- derived state must stay recomputable
-
-\- evidence state must remain immutable after publish
-
-\- routing must derive from persisted truth, not stale UI memory
-
-\- the presentation layer should remain replaceable in the future
-
-
-
-\---
-
-
-
-\## Workflow summary
-
-The current documented workflow is:
-
-
-
-1\. Start a new dataset/run
-
-2\. Complete the planned sample set in Step 1
-
-3\. Save working truth
-
-4\. Upload instrument/raw data
-
-5\. Save governed exclusions or row-drop decisions
-
-6\. Rebuild and audit downstream matches/calculations
-
-7\. Continue draft work or submit for review
-
-8\. Independent reviewer claims and reviews the run
-
-9\. Approved runs are published into an immutable evidence package
-
-10\. If post-publish correction is required, an authorized user creates a new working revision derived from the published evidence package
-
-
-
-The detailed workflow contract lives in `WORKFLOW\_TIMELINE.md`.
-
-
-
-\---
-
-
-
-\## Documentation map
-
-Start with:
-
-
-
-1\. `INDEX.md`
-
-2\. `PROJECT\_BRIEF.md`
-
-3\. `BOOTSTRAP\_QUESTIONNAIRE.md`
-
-4\. `WORKFLOW\_TIMELINE.md`
-
-5\. `DATA\_MODEL.md`
-
-6\. `STATE\_CLASSIFICATION.md`
-
-7\. `ARCHITECTURE\_SELECTION.md`
-
-8\. relevant ADRs
-
-9\. `TEST\_STRATEGY.md`
-
-10\. `QUALITY\_GATES.md`
-
-11\. `FAILURE\_CATALOG.md`
-
-12\. `RETROSPECTIVE.md`
-
-
-
-Do not change critical workflow code without grounding in those docs.
-
-
-
-\---
-
-
-
-\## Key design principles
-
-\- Planned sample set is first-class working truth.
-
-\- `Run`, `Working Revision`, and `Published Evidence Package` are separate concepts and must remain separate.
-
-\- Publish creates immutable evidence.
-
-\- Reopen does not mutate published evidence; it creates a new working revision with lineage back to the published source.
-
-\- Single-editor lock semantics are intentional for the current deployment model.
-
-\- Review independence is mandatory.
-
-\- Restricted-environment practicality matters; do not assume cloud-first architecture.
-
-
-
-\---
-
-
-
-\## Current deployment posture
-
-The near-term deployment model assumes:
-
-\- shared storage
-
-\- launcher-based access
-
-\- local/network-restricted operation
-
-\- no dependency on public hosted infrastructure for core operation
-
-
-
-This is a deliberate choice for the current phase, not a claim that the long-term deployment model is permanently fixed.
-
-
-
-\---
-
-
-
-\## What this repo is trying to prevent
-
-This docs set exists in part because earlier work revealed recurring failure patterns such as:
-
-\- UI state drifting away from authoritative working state
-
-\- routing depending on remembered page state instead of persisted truth
-
-\- save/reopen behavior losing or mutating governed inputs
-
-\- patches fixing the visible symptom while leaving the deeper persistence or lifecycle defect intact
-
-\- architecture lagging behind implementation
-
-\- failure lessons living only in chat or memory instead of durable project docs
-
-
-
-Those lessons are now meant to be encoded directly into the way the project is built.
-
-
-
-\---
-
-
-
-\## For contributors and coding agents
-
-Before changing code, do not assume the current implementation is the contract.
-
-
-
-The contract lives in the docs.
-
-
-
-At minimum, ground yourself in:
-
-\- workflow timeline
-
-\- data model
-
-\- state classification
-
-\- architecture selection
-
-\- relevant ADRs
-
-\- test strategy
-
-\- quality gates
-
-\- failure catalog
-
-\- retrospective
-
-
-
-If a code path and the docs disagree, surface the conflict before implementing further changes.
-
-
-
-\---
-
-
-
-\## Repo intent
-
-This repository is meant to function as:
-
-\- project memory
-
-\- implementation guardrail
-
-\- onboarding surface
-
-\- architecture anchor
-
-\- anti-regression knowledge base
-
-
-
-If used correctly, it should make the next implementation pass more deliberate, more stable, and less likely to repeat the kind of failure patterns that previously consumed time and trust.
-
+The docs govern the package contract. If code and docs disagree, surface the
+conflict before writing more code.
