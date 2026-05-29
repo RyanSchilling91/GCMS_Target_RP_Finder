@@ -1,0 +1,105 @@
+(s10H
+Data File: 20180950069.d                                         Page 1   
+Report Date: 28-Oct-2025 11:18
+
+
+
+                    USGS - National Water Quality Laboratory
+
+
+Data file : D:\4433-Reprocess-ORG\FY2019-PROCESSED\4433B19158.b\20180950069.d
+Lab Smp Id: 20180950069                  Client Smp ID: AKBRENNAN,MI,
+Inj Date  : 08-JUN-2019 02:33            
+Operator  : rcrevell                     Inst ID: 75B.i
+Smp Info  : 20180950069
+Misc Info : Surface water,Regular,Clinton River at Moravian Drive at Mt.07-JUN-2019 19:01
+Comment   :  
+Method    : D:\4433-Reprocess-ORG\FY2019-PROCESSED\4433B19158.b\4433May19.m
+Meth Date : 28-Oct-2025 11:00 kash1      Quant Type: ISTD
+Cal Date  : 07-JUN-2019 19:01            Cal File: CAL1-10.d
+Als bottle: 18                          
+Dil Factor: 1.00000                      
+Integrator: Falcon+                      Compound Sublist: all.sub
+Target Version:  4.14                    
+Processing Host: IGSKCF123LBONSA
+
+
+Concentration Formula: Amt * DF * 400/Vo * CpndVariable
+
+     Name        Value     Description
+-------------- ---------- -----------------------
+      DF            1.000  Dilution Factor
+      Vo          974.000  Sample Volume
+Cpnd Variable              Local Compound Variable
+
+(s16.6H
+
+                                                                                          CONCENTRATIONS
+                                      QUANT SIG                                         ON-COLUMN    FINAL
+Compounds                               MASS           RT   EXP RT   REL RT  RESPONSE    (ng/ul)    ( ug/L)         REVIEW CODE
+==========================              ====          ==== ======== ======== ========    =======    =======         ===========
+    1 tetrachloroethylene                166         5.809   5.814 (0.194)       3602    0.00699    0.00287(M)                 
+    2 bromoform                          173         8.352   8.352 (0.656)       2452    0.02835     0.0116(M)                 
+    3 cumene                             105         9.486   9.487 (0.745)       5331    0.00871    0.00358(M)                 
+    4 phenol                              94        11.511  11.474 (0.904)      48595    0.20312     0.0834(M)                 
+*   5 1,4-dichlorobenzene-d4             152        12.731  12.727 (1.000)     952823    5.00000                               
+    8 acetophenone                       105        14.732  14.747 (1.157)      69495    0.28323      0.116(M)                 
+    9 para-cresol                        107        15.076  15.038 (1.184)      18058    0.11429     0.0469(M)      dubious    
+$  10 decafluorobiphenyl                 334        16.474  16.479 (0.875)     325371    0.78598      0.323                    
+   12 camphor                             95        17.760  17.769 (0.943)      16495    0.09929     0.0408(M)      dubious    
+*  15 naphthalene-d8                     136        18.824  18.829 (1.000)    3800693    5.00000                               
+   16 naphthalene                        128        18.913  18.918 (1.005)      91912    0.10360     0.0425(M)                 
+   17 methyl salicylate                  120        19.153  19.154 (1.018)       7689    0.05657     0.0232(M)                 
+   20 indole                             117        21.630  21.640 (1.149)      17680    0.05499     0.0226(QM)     dubious    
+   21 2-methylnapthalene                 142        21.767  21.767 (0.860)      55677    0.11480     0.0471                    
+   23 1-methylnapthalene                 142        22.096  22.101 (0.873)      37620    0.08088     0.0332(M)                 
+   25 2,6-dimethylnapthalene             156        24.008  24.008 (0.949)      20211    0.05292     0.0217(M)      dubious    
+*  27 acenaphene-d10                     164        25.303  25.308 (1.000)    2127248    5.00000                               
+   29 N,N-diethyltoluamide (DEET)        119        26.810  26.838 (1.060)      25186    0.09832     0.0404(M)                 
+   30 diethyl phthalate                  149        27.003  27.022 (1.067)      72792    0.16945     0.0696(M)                 
+   31 4-tert-octylphenol                 135        27.247  27.253 (1.077)      50452    0.16046     0.0659(QM)     dubious    
+   33 benzophenone                       182        27.699  27.709 (1.095)      17392    0.14489     0.0595(M)                 
+   34 ethyl citrate                      157        27.958  27.959 (0.935)      19284    0.15401     0.0632(M)                 
+   36 para-nonylphenol-total             135        29.362  29.372 (0.982)     146501    1.06855      0.439(QM)     dubious    
+(s10H
+(s10H
+Data File: 20180950069.d                                         Page 2   
+Report Date: 28-Oct-2025 11:18
+
+(s16.6H
+                                                                                          CONCENTRATIONS
+                                      QUANT SIG                                         ON-COLUMN    FINAL
+Compounds                               MASS           RT   EXP RT   REL RT  RESPONSE    (ng/ul)    ( ug/L)         REVIEW CODE
+==========================              ====          ==== ======== ======== ========    =======    =======         ===========
+   39 tri(2-chloroethyl)phosphate        249        29.475  29.466 (0.986)       3230    0.09150     0.0376(M)                 
+   41 pentachlorophenol                  266        29.395  29.405 (0.983)      17124    0.34733      0.143(M)                 
+*  43 phenanthrene-d10                   188        29.898  29.904 (1.000)    3366559    5.00000                               
+   44 phenanthrene                       178        29.964  29.970 (1.002)    1709560    2.21245      0.909                    
+   45 Anthracene                         178        30.120  30.120 (1.007)     120848    0.19874     0.0816                    
+$  46 d9-Caffiene                        203        30.525  30.516 (1.021)     311362    1.31447      0.540                    
+   47 caffeine                           194        30.638  30.629 (1.025)      75580    0.40332      0.166(M)                 
+   48 galaxolide (HHCB)                  243        30.704  30.704 (1.027)      40104    0.20076     0.0824(M)                 
+   50 carbazole                          167        30.689  30.685 (1.026)     328432    0.47486      0.195(M)                 
+   59 anthraquinone                      152        32.389  32.390 (1.083)     187120    1.63750      0.672                    
+$  60 d10 - fluoranthene                 212        33.359  33.360 (1.116)     847152    1.24444      0.511                    
+   61 fluoranthene                       202        33.406  33.402 (1.117)    3292400    3.88825       1.60                    
+   64 pyrene                             202        33.934  33.930 (1.135)    2316486    2.93832       1.21(M)                 
+   65 d16 bisphenol A                    224        34.211  34.183 (1.144)     392999                      (M)                 
+   68 tri(dichlorisopropyl)phosphat      381        35.412  35.403 (1.184)       2866    0.18595     0.0764                    
+   69 Tris(2-butoxyethyl)phosphate       299        35.935  35.931 (1.202)      19122    2.11289      0.868(M)                 
+   70 triphenyl phosphate                326        35.973  35.968 (1.203)      12085    0.13208     0.0542(M)                 
+   71 diethylhexyl phthalate             149        36.858  36.863 (1.233)     406621    1.20546      0.495                    
+*  72 chrysene-d12                       240        36.566  36.566 (1.000)    3112153    5.00000                               
+   74 benzo(a)pyrene                     252        39.353  39.349 (0.997)     688030    1.03577      0.425(MH)                
+*  75 perylene-d12                       264        39.466  39.467 (1.000)    2912478    5.00000                               
+   76 3-beta-coprostanol                 373        40.700  40.677 (1.031)      17660    1.64723      0.676                    
+   77 cholesterol                        386        40.921  40.908 (1.037)      51716    2.82078       1.16                    
+   78 beta-sitosterol                    396        42.178  42.165 (1.069)      24562    3.77221       1.55                    
+   79 stigmastanol                       215        42.273  42.250 (1.071)      40947    2.12045      0.871(M)                 
+(s10H
+
+QC Flag Legend
+
+Q - Qualifier signal failed the ratio test.
+M - Compound response manually integrated.
+H - Operator selected an alternate compound hit.
