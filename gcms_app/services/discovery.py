@@ -1,9 +1,20 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
 from .folder_utils import normalize_folder_key
+
+# Matches sample folders: 8-digit date prefix followed by more digits
+# e.g. 20181020001.d — yes
+# e.g. CAL1-10.d     — no
+# e.g. CCV5-25.d     — no
+_SAMPLE_PATTERN = re.compile(r'^\d{8,}', re.IGNORECASE)
+
+def _is_sample_folder(folder_name: str) -> bool:
+    """Return True only for analyst sample .d folders."""
+    return bool(_SAMPLE_PATTERN.match(folder_name))
 
 TARGET_REPORTS = ("target.rp",)
 
@@ -19,6 +30,8 @@ def discover_batch(folder: Path) -> dict[str, Any]:
 
     for child in sorted(folder.iterdir(), key=lambda p: p.name.lower()):
         if not child.is_dir() or child.suffix.lower() != ".d":
+            continue
+        if not _is_sample_folder(child.name):
             continue
         target_rp_path = _find_file(child, "target.rp")
         d_folders.append({
