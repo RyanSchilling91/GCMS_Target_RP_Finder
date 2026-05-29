@@ -1,160 +1,214 @@
-# Bootstrap Questionnaire — AI-Guided Project Intake
+Bootstrap Questionnaire — AI-Guided Project Intake
+Project: Batch File Scraper & U-Del Compound Database App (Trinity-Backed)
 
-## Purpose
-This is the entry point for new projects. It turns a vague idea into enough documented structure to let AI agents code safely.
+Guided Fill Status
 
-The goal is not speed. The goal is to prevent architectural drift, hidden assumptions, and premature coding.
+Status: COMPLETE — All 7 Phases
+Completed by: Project owner + AI guided intake
+Trinity role: Plug-and-play SQLite/FastAPI backend (library/storage layer only)
+This questionnaire covers the full application layer built on top of Trinity
 
-## Agent rules
-1. Do not start coding in this phase.
-2. Work in phases.
-3. Classify each phase as Complete, Present but weak, or Missing / blocking.
-4. Guide the user with examples when needed.
-5. Do not assume. Log uncertainty.
-6. Map each phase to the document it feeds.
 
-## Phase 1 — Project purpose
-Target: `PROJECT_BRIEF.md`
+PHASE 1 — Project Purpose
+Target: PROJECT_BRIEF.md
+Status: COMPLETE
+What problem are we solving?
+Lab analysts must manually open thousands of .d sample folders to locate and record compound U-Delete/U-Del/UDEL codes. This is slow, error-prone, and produces hand-built lists that are inconsistent and hard to audit. The app automates the entire scrape — scanning folder hierarchies, parsing target instrument files, and building a structured, queryable database — so that no user ever has to open files by hand again.
+Who are the primary users?
 
-Ask:
-- What problem are we solving?
-- Who are the users?
-- What do they do today without this tool?
-- What is painful, slow, risky, inconsistent, or hard to audit?
-- What decision/workflow/control point should this tool improve?
-- What is out of scope for version 1?
-- What would prove the project worked?
+Lab analysts / operators — use the app directly to run scans, review summaries, and trigger exports
+Managers and other stakeholders — consume Excel/CSV exports only; never interact with the app directly
 
-Output check:
-- problem clarity
-- user clarity
-- scope boundaries
-- measurable success criteria
+What do users do today without this tool?
+They manually navigate folder hierarchies, open individual instrument files, and transcribe compound codes into spreadsheets by hand. With potentially thousands of .d folders per batch, this is prohibitively slow and introduces transcription errors.
+What is painful, slow, risky, or inconsistent today?
 
-## Phase 2 — Workflow reality
-Target: `WORKFLOW_TIMELINE.md`
+Opening thousands of files manually
+Building compound lists by hand with no consistency guarantee
+No persistent database — each export is a one-off effort
+No way to selectively query or filter historical batch data
 
-Ask:
-- What enters the system first?
-- Where does it come from?
-- Who touches it first?
-- What happens next, step by step?
-- Which steps are manual?
-- Which are automated?
-- Where do decisions happen?
-- What gets reviewed?
-- Who approves or rejects?
-- What leaves the system at the end?
+What is out of scope for version 1?
 
-Output check:
-- clear start
-- clear sequence
-- human vs system actions separated
-- review and end state defined
+User authentication / login system (app is open to all local users)
+Any file format other than target.rp
+External integrations (LIMS, cloud, network sync)
+Compound data editing after import
 
-## Phase 3 — Data model / truth layer
-Target: `DATA_MODEL.md`
+What would prove this project worked?
 
-Ask:
-- What are the main entities?
-- What identifies each entity?
-- What fields does each entity have?
-- Which fields are required?
-- Who owns each field: user, system, reviewer, external source?
-- Which fields change over time?
-- What lifecycle states are valid?
-- What states must never happen?
+A known .b folder is scanned and all .d samples and their compounds appear correctly in the Trinity DB
+U-Delete / U-Del / UDEL codes are captured with zero false positives or misses
+An Excel export matches a manually-built reference sheet
 
-Output check:
-- entities defined
-- ownership assigned
-- identifiers clear
-- lifecycle states logical
-- forbidden states captured
 
-## Phase 4 — State classification
-Target: `STATE_CLASSIFICATION.md`
+PHASE 2 — Workflow Reality
+Target: WORKFLOW_TIMELINE.md
+Status: COMPLETE
+Step-by-step operational sequence:
 
-Ask:
-- What is editable working state?
-- What can be recomputed as derived state?
-- What must become immutable evidence state?
-- What survives refresh, restart, reprocessing, publication, and archive?
-- What may be overwritten, versioned, superseded, or reconstructed?
+User initiates a scan — user manually types or browses to a .b folder path (local or network)
+App traverses the folder — scans for all upper-level .d subfolders within the .b
+App locates target.rp — within each .d folder, app finds the target.rp folder
+App parses target.rp — extracts compound number, compound name, and U-Del comment field (variants: U-Delete, U-Del, UDEL)
+App flags parse issues — any .d folder missing a target.rp, or any file that fails to parse, is flagged in the summary; scanning continues on other folders
+User reviews summary/preview — scan results are shown before any data is committed; user acknowledges any flags
+User confirms commit — user confirms and data is persisted to Trinity (batch → sample → compound hierarchy)
+Versioning on re-scan — if the .b batch already exists in the DB, a new versioned entry is created; old versions are preserved and hidden by default but accessible via history view
+DB accumulates over time — user can scan different .b folders on separate occasions; all data accumulates in Trinity
+User triggers export — at any time, user opens export panel, selects specific batches to include OR chooses full DB export, and generates .xlsx or .csv file
+Export is ephemeral — exported file is a download-and-done action; not stored in the DB
 
-Output check:
-- no duplicated truth
-- derived data not casually persisted
-- evidence protected from silent overwrite
+Human vs. system actions:
+StepActorBrowse/type folder pathHumanFolder traversal and .d discoverySystemtarget.rp location and parsingSystemFlag missing/failed foldersSystemReview summary and confirmHumanDB commit and versioningSystemSelect export range and trigger exportHumanGenerate .xlsx / .csvSystem
 
-## Phase 5 — Architecture selection
-Target: `ARCHITECTURE_SELECTION.md` and ADRs
+PHASE 3 — Data Model / Truth Layer
+Target: DATA_MODEL.md
+Status: COMPLETE
+Core entities:
+1. Batch
 
-Ask before suggesting tools:
-- single-user or multi-user?
-- simultaneous users?
-- local, on-prem, cloud, offline, or hybrid?
-- browser, desktop, API, or mixed?
-- restricted IT environment?
-- auditability requirements?
-- expected data size and performance needs?
-- recovery and retention needs?
+Identifier: .b folder name (e.g. Run001.b)
+Fields: folder name, full folder path, scan timestamp, scan version number
+Owner: system (created at scan time)
+Notes: Multiple scan versions can exist per batch; each re-scan creates a new version
 
-Then compare options for:
-- UI layer
-- persistence
-- deployment
-- auth/session
-- concurrency/collaboration
+2. Sample
 
-Output check:
-- no default stack assumption
-- tradeoffs compared
-- recommendation justified
-- ADR candidates identified
+Identifier: .d folder name (e.g. 20192950103.d) — timestamp-structured, unique enough without parent batch, but stored with parent batch reference
+Fields: folder name, parent batch reference, parse status (success / flagged)
+Owner: system (created at scan time)
 
-## Phase 6 — Assumptions and unknowns
-Target: `ASSUMPTIONS_AND_OPEN_QUESTIONS.md`
+3. Compound
 
-Ask:
-- What are we assuming?
-- What could break if wrong?
-- Who can resolve it?
-- What needs validation?
-- What is intentionally deferred?
+Identifier: compound number + compound name (shared across samples/batches)
+Fields: compound number, compound name, U-Del comment field value (U-Delete / U-Del / UDEL)
+Owner: system (extracted from target.rp)
+Notes: Same compound appears across many samples and batches; compound records are shared, not owned by a single sample
 
-Output check:
-- assumptions explicit
-- risks real
-- unknowns tracked
-- architecture-affecting unknowns resolved or deferred
+4. Compound Instance (Sample ↔ Compound join)
 
-## Phase 7 — Verification and completion
-Target: `TEST_STRATEGY.md` and `QUALITY_GATES.md`
+Identifier: sample reference + compound reference
+Fields: U-Del comment value for this specific instance
+Owner: system
 
-Ask:
-- What absolutely must work?
-- What edge cases matter?
-- What failure would be unacceptable?
-- What fixtures are needed?
-- What must pass before merge/release?
-- What rollback or recovery path is required?
+5. U-Del Detection Count (Derived)
 
-Output check:
-- tests concrete
-- completion criteria measurable
-- release bar objective
+Not stored as a raw field — computed at parse time from compound instance data
+Represents: count of U-Del hits per compound per batch / per sample
+Displayed in: summary view and batch overview; not persisted as canonical truth
 
-## Readiness statement
-Before coding begins, the agent must state whether the project is ready:
+6. Scan Version
 
-- PROJECT_BRIEF: Complete / Present but weak / Missing
-- WORKFLOW_TIMELINE: Complete / Present but weak / Missing
-- DATA_MODEL: Complete / Present but weak / Missing
-- STATE_CLASSIFICATION: Complete / Present but weak / Missing
-- ARCHITECTURE_SELECTION: Complete / Present but weak / Missing
-- ASSUMPTIONS_AND_OPEN_QUESTIONS: Complete / Present but weak / Missing
-- TEST_STRATEGY: Complete / Present but weak / Missing
-- QUALITY_GATES: Complete / Present but weak / Missing
+Identifier: batch reference + version number + scan timestamp
+Fields: batch reference, version number, scan timestamp, commit status
+Owner: system
+Behavior: Old versions hidden by default; accessible via history view
 
-If any are weak or missing, block or explicitly defer before coding.
+Forbidden states:
+
+A compound instance with no parent sample
+A sample with no parent batch
+An in-place overwrite of a previously committed batch version
+
+
+PHASE 4 — State Classification
+Target: STATE_CLASSIFICATION.md
+Status: COMPLETE
+Working state (mutable before confirm)
+
+Scan results in preview/summary — editable only in the sense that the user can cancel before commit
+Pending scan job (in-flight parse operations)
+
+Evidence state (immutable after confirm)
+
+All committed batch, sample, and compound data in Trinity
+Once the user confirms a scan, all parsed records are frozen — never edited by users
+Re-scan is the only mechanism to update a batch's data (creates a new version, does not overwrite)
+
+Derived state (computed, not stored as canonical truth)
+
+U-Del detection count per batch / per compound
+Export files (.xlsx / .csv) — ephemeral, generated on demand, never stored in DB
+
+Versioning behavior:
+
+Re-scanning a .b folder creates a new versioned entry
+Old versions are retained and hidden by default
+History view exposes old versions explicitly when requested
+No silent overwrites — ever
+
+Export behavior:
+
+Ephemeral: generated on demand, no audit trail required in v1
+User selects batch filter or full DB export before generation
+
+
+PHASE 5 — Integration Points
+Target: INTEGRATIONS.md
+Status: COMPLETE
+File system access
+
+Must support both local paths and network paths (UNC paths, mapped drives)
+App is deployed as a local desktop/server tool
+No cloud file access in v1
+
+Trinity integration
+
+Interface: Trinity is imported as a Python library — direct SQLite access via Trinity's internal API
+Transport: No HTTP/REST calls to Trinity; Trinity is a local storage and persistence layer
+Frontend: FastAPI + HTML for the local UI
+Role: Trinity provides the DB schema, persistence, and query interface; the app provides the scan engine and UI logic on top
+
+Export
+
+Formats: .xlsx and .csv both supported
+Library: openpyxl (xlsx) + csv stdlib or pandas (csv)
+Format standard: Formatted output — headers, readable column widths; matches what stakeholders expect to receive
+
+External integrations
+
+None in v1 — fully self-contained local system
+
+
+PHASE 6 — Unknowns & Risks
+Target: UNKNOWNS.md
+Status: COMPLETE
+Resolved / Low risk:
+ItemStatusNotestarget.rp file format✅ KnownSample files available; structure confirmedScale per batch✅ LowFew hundred .d folders max; no performance concernTrinity interface✅ KnownSQLite + FastAPI; direct library integrationExport format✅ Decidedxlsx + csv both supported
+Open / Flagged risks:
+ItemRisk LevelNotesSQLite concurrent writes⚠️ MildMultiple users scanning simultaneously could cause write contention; need write-lock or scan queue strategy in Trinity integration layerNetwork path reliability⚠️ MinorUNC/mapped drive behavior on target OS needs a test pass; timeout and path error handling must be implemented
+
+PHASE 7 — Verification Criteria
+Target: VERIFICATION.md
+Status: COMPLETE
+Primary end-to-end verification test:
+
+DB build test: Run a known .b folder through the app; verify all .d samples and their compounds appear correctly in Trinity DB
+Code accuracy test: Confirm all U-Delete / U-Del / UDEL variants are captured with zero false positives or misses across the known test set
+Export accuracy test: Generate Excel output and verify it matches a manually-built reference sheet
+
+Must-pass edge cases before v1 is shippable:
+
+ Missing target.rp folder in a .d is flagged in the summary UI (not silently skipped)
+ Re-scan of an existing .b folder creates a new versioned entry without overwriting old data
+ Export batch filter correctly limits output to only selected batches
+
+Sign-off process:
+
+Internal dev test — developer runs all primary tests and edge cases against real sample data
+User acceptance — lab user runs the app against their actual batch folders and confirms output matches expectations before v1 is called done
+
+
+Final Readiness Summary
+This bootstrap is complete and ready to generate:
+
+ PROJECT_BRIEF.md
+ WORKFLOW_TIMELINE.md
+ DATA_MODEL.md
+ STATE_CLASSIFICATION.md
+ INTEGRATIONS.md
+ UNKNOWNS.md
+ VERIFICATION.md
+
+Do not begin coding until planning documents above are drafted and reviewed.

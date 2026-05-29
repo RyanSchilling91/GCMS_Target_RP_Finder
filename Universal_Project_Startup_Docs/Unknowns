@@ -1,0 +1,118 @@
+# UNKNOWNS
+
+## Purpose of this document
+Document all open questions, unverified assumptions, risks, and deferred decisions so nothing blindsides implementation.
+
+An unknown that is not documented is a trap. An unknown that is documented is a managed risk.
+
+---
+
+## Guided fill status
+- Status: Complete
+- Last reviewed by: Project owner + AI
+- Source of truth: `BOOTSTRAP_QUESTIONNAIRE_APP.md`
+
+---
+
+## Resolved / Low risk
+
+| Item | Status | Resolution |
+|---|---|---|
+| `target.rp` file format | ✅ Resolved | Sample files available; structure confirmed; parser can be designed from known format |
+| Scale per batch | ✅ Resolved | Few hundred `.d` folders per `.b` at most; no performance scaling concern in v1 |
+| Trinity interface | ✅ Resolved | SQLite + FastAPI; imported as Python library; no HTTP calls needed |
+| Export format | ✅ Resolved | `.xlsx` (openpyxl) and `.csv` (stdlib) both supported |
+| U-Del code variants | ✅ Resolved | Three variants confirmed: `U-Delete`, `U-Del`, `UDEL`; case-insensitive match recommended |
+| Data hierarchy | ✅ Resolved | Batch (`.b`) → Sample (`.d`) → Compound, via `CompoundInstance` join |
+| Versioning behavior | ✅ Resolved | Re-scan creates new `ScanVersion`; prior versions retained and hidden by default |
+| Auth requirements | ✅ Resolved | No authentication in v1; app is open to all local users |
+
+---
+
+## Open / Flagged risks
+
+### Risk 1 — SQLite concurrent write contention
+- **Description:** Multiple users scanning different `.b` folders and committing simultaneously could cause SQLite write lock contention
+- **Risk level:** ⚠️ Mild
+- **Probability:** Low — a few users scanning at the same time is possible but not the common case
+- **Impact if unhandled:** Commit failure or timeout for one user; no data corruption if transactions are used correctly
+- **Mitigation plan:**
+  - Enable SQLite WAL (Write-Ahead Logging) mode at DB initialization
+  - Wrap all commit operations in transactions with retry/backoff on lock contention
+  - Set a reasonable lock timeout (e.g. 5–10 seconds) before surfacing an error to the user
+- **Decision deadline:** Before integration testing; must be verified before v1 release
+- **Who resolves:** Engineering owner
+
+---
+
+### Risk 2 — Network path reliability and timeout behavior
+- **Description:** When the `.b` folder is on a UNC or mapped network drive, the drive may be slow, intermittently unavailable, or may time out mid-scan
+- **Risk level:** ⚠️ Minor
+- **Probability:** Low to medium depending on the lab's network infrastructure
+- **Impact if unhandled:** App hangs indefinitely waiting on a network operation; user experience degrades; may require force-close
+- **Mitigation plan:**
+  - Set explicit OS-level file operation timeouts where supported
+  - Catch `OSError` / `TimeoutError` / `PermissionError` on all file system calls
+  - Flag affected `.d` folders as errored rather than hanging the whole scan
+  - Test UNC path behavior on the target OS (Windows primary; Linux if applicable) before v1 release
+- **Decision deadline:** Before user acceptance testing
+- **Who resolves:** Engineering owner + lab IT (for network path confirmation)
+
+---
+
+### Risk 3 — `target.rp` internal structure variations
+- **Description:** While sample files have been reviewed and the format is understood, it is possible that older or newer instrument software versions produce slightly different `target.rp` internal layouts
+- **Risk level:** ⚠️ Low — flagged for awareness
+- **Probability:** Low if the instrument software version is consistent across all lab machines
+- **Impact if unhandled:** Parser fails silently or extracts incorrect compound data for edge-case files
+- **Mitigation plan:**
+  - Parser should log a warning (not a hard error) when an unexpected field structure is encountered
+  - Sample files from all instrument software versions in use should be tested during dev
+  - Parse errors surface in the pre-commit summary so the user is always aware
+- **Decision deadline:** Before parser implementation begins
+- **Who resolves:** Engineering owner + analyst (instrument software version inventory)
+
+---
+
+### Risk 4 — OS compatibility
+- **Description:** The app is designed for local or network deployment. Primary OS is assumed to be Windows. Linux support may be needed if the server runs Linux.
+- **Risk level:** ⚠️ Low
+- **Probability:** Low in v1
+- **Impact if unhandled:** UNC path handling, file separator characters, and SQLite file locking behavior differ across OS
+- **Mitigation plan:**
+  - Use `pathlib.Path` throughout for cross-platform path handling
+  - Test on Windows as the primary target
+  - Document any OS-specific limitations
+- **Decision deadline:** Before dev environment setup
+- **Who resolves:** Engineering owner
+
+---
+
+## Deferred decisions
+
+| Decision | Why deferred | When to revisit |
+|---|---|---|
+| Export audit trail (logging what was exported and when) | Out of scope for v1 by explicit project owner decision | If compliance or audit requirements emerge post-v1 |
+| PDF export format | Not requested in v1 | If stakeholders request a formatted report rather than raw data |
+| Role-based access control | Out of scope for v1 | If the user base grows or sensitive data classification changes |
+| Central / shared DB hosting (vs. local SQLite file) | Low priority while user count is small | If concurrent access or multi-site needs grow |
+| Long-term version retention policy | No retention limit set in v1 | If DB size becomes a concern over many re-scans |
+
+---
+
+## Assumptions being carried forward
+
+| Assumption | Risk if wrong | How to verify |
+|---|---|---|
+| `.b` folder name is unique enough to serve as the batch business key | Low — naming is instrument-generated and timestamp-anchored | Confirm with analyst that folder names are never reused for different batches |
+| `.d` folder name is unique within a scan (timestamp structure prevents collisions) | Low | Confirm with analyst; verify no duplicate `.d` folder names exist in real batch data |
+| `target.rp` contains one record per compound (not multiple rows per compound) | Medium — if there are multiple rows, compound de-duplication logic is needed | Verify against sample files before parser implementation |
+| All three U-Del variants (`U-Delete`, `U-Del`, `UDEL`) are exhaustive | Medium — if additional variants exist, they will be silently missed | Confirm with analyst; add ability to flag "unknown comment values" in parse output |
+| A few hundred `.d` folders is the upper bound for v1 batch sizes | Low — confirmed by project owner | Re-verify before scaling to larger data sets |
+
+---
+
+## Notes for the agent
+- Do not treat assumptions as confirmed facts. If an assumption in this document could affect parser design, data model, or DB schema, verify it against real sample data before implementing.
+- The SQLite concurrency risk is the most likely to surface during integration testing — address it proactively.
+- If a new unknown surfaces during implementation, add it here immediately rather than making a silent assumption.

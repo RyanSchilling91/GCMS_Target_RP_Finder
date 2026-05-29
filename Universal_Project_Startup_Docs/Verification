@@ -1,0 +1,190 @@
+# VERIFICATION
+
+## Purpose of this document
+Define what "done" looks like, what tests must pass before v1 is shippable, who signs off, and what acceptance looks like.
+
+This is not a test implementation guide. It is a planning-level definition of verification criteria so implementation stays honest.
+
+---
+
+## Guided fill status
+- Status: Complete
+- Last reviewed by: Project owner + AI
+- Source of truth: `BOOTSTRAP_QUESTIONNAIRE_APP.md`
+
+---
+
+## Verification philosophy
+
+The system is verified when:
+1. The core end-to-end workflow produces correct, complete results against known data
+2. All must-pass edge cases behave correctly
+3. A real lab user confirms the output matches their expectations with production-representative data
+
+Verification is not complete until both the internal dev test pass AND the user acceptance pass are done.
+
+---
+
+## Phase 1 — Internal dev verification
+
+### Test 1 — Core end-to-end: DB build accuracy
+**What it tests:** The full scan-to-commit workflow produces correct, complete data in Trinity
+
+**Setup:**
+- Use a known `.b` folder with a known set of `.d` subfolders and `target.rp` files
+- Manually identify the expected batches, samples, compounds, and U-Del codes before running the app
+
+**Steps:**
+1. Point the app at the known `.b` folder
+2. Run the scan
+3. Review the pre-commit summary
+4. Confirm the commit
+5. Query Trinity DB directly
+
+**Pass criteria:**
+- All expected `.d` samples appear as `Sample` records linked to the correct `ScanVersion`
+- All expected compounds appear as `Compound` records
+- All expected `CompoundInstance` records exist with correct `udel_comment` and `is_udel` values
+- No unexpected extra records
+- `Batch` record exists with correct `batch_name`
+- `ScanVersion` record exists with correct `version_number = 1`, `scanned_at` timestamp, and `sample_count`
+
+---
+
+### Test 2 — U-Del code accuracy: zero false positives, zero misses
+**What it tests:** All three U-Del variants are captured; no non-U-Del compounds are incorrectly flagged
+
+**Setup:**
+- Use a `target.rp` file known to contain all three variants: `U-Delete`, `U-Del`, `UDEL`
+- Also include compounds with no U-Del comment
+- Also include compounds with other comment values (non-U-Del)
+
+**Pass criteria:**
+- All compounds with `U-Delete`, `U-Del`, or `UDEL` (any case) have `is_udel = True`
+- All compounds with no comment or a non-U-Del comment have `is_udel = False`
+- Zero false positives (non-U-Del compounds marked as U-Del)
+- Zero misses (U-Del compounds not flagged)
+
+---
+
+### Test 3 — Export accuracy: matches reference sheet
+**What it tests:** The Excel and CSV exports produce output that matches a manually-built reference
+
+**Setup:**
+- After Test 1 commits, build a reference spreadsheet manually from the known source data
+
+**Steps:**
+1. Open the export panel
+2. Select the known batch
+3. Generate `.xlsx` export
+4. Generate `.csv` export
+
+**Pass criteria:**
+- Row count in export matches expected compound instance count
+- All column values (batch name, sample name, compound number, compound name, U-Del comment, is_udel) match the reference
+- No extra rows, no missing rows
+- CSV and Excel outputs are consistent with each other
+
+---
+
+### Test 4 (Edge case) — Missing `target.rp` flagged in summary
+**What it tests:** A `.d` folder without a `target.rp` is flagged, not silently skipped
+
+**Setup:**
+- Use a `.b` folder where at least one `.d` subfolder has no `target.rp` folder inside it
+
+**Pass criteria:**
+- The pre-commit summary lists the affected `.d` folder name under "flagged samples"
+- The flag reason is `missing_target_rp`
+- The scan completes and all other samples parse successfully
+- The flagged sample appears in Trinity after commit with `parse_status = missing_target_rp`
+- No compound instances are created for the flagged sample
+
+---
+
+### Test 5 (Edge case) — Re-scan versioning
+**What it tests:** Re-scanning the same `.b` folder creates a new version without overwriting old data
+
+**Steps:**
+1. Scan a known `.b` folder — confirms as version 1
+2. Scan the same `.b` folder again — confirms as version 2
+3. Query Trinity DB
+
+**Pass criteria:**
+- Two `ScanVersion` records exist for the same `batch_id`
+- Version 1 has `is_latest = False`
+- Version 2 has `is_latest = True`
+- All `Sample` and `CompoundInstance` records from version 1 are intact and unchanged
+- All `Sample` and `CompoundInstance` records from version 2 are present and correctly linked to `scan_version_id` for version 2
+
+---
+
+### Test 6 (Edge case) — Export batch filter
+**What it tests:** Selecting specific batches for export correctly scopes the output
+
+**Setup:**
+- Have at least two different batches committed in Trinity (Batch A and Batch B)
+
+**Steps:**
+1. Open export panel
+2. Select Batch A only
+3. Generate export
+
+**Pass criteria:**
+- Export contains only records from Batch A
+- No records from Batch B appear in the export
+- Run the same test selecting Batch B only — confirms the inverse
+
+---
+
+## Phase 2 — User acceptance verification
+
+### Who runs it
+Lab analyst or operator using real production batch data (not the dev test data set)
+
+### What they do
+1. Point the app at a real `.b` folder they are familiar with
+2. Run the scan
+3. Review the pre-commit summary against their own expectations
+4. Confirm commit
+5. Generate an Excel export
+6. Compare the export to their own knowledge of the batch (or a manually-built reference if available)
+
+### Pass criteria
+- The analyst confirms: "The compounds and U-Del codes in this export match what I know is in these files"
+- Any discrepancies are investigated and resolved before v1 is called done
+- At least one batch with a known mix of U-Del and non-U-Del compounds is tested
+
+### Sign-off
+- Engineering owner signs off after Phase 1 passes
+- Lab analyst / operator signs off after Phase 2 passes
+- Both sign-offs are required before v1 is released
+
+---
+
+## Regression test expectations
+
+After v1, any code change that touches:
+- The file system traversal logic
+- The `target.rp` parser
+- The Trinity commit logic
+- The versioning behavior
+- The export generation
+
+...must re-run Tests 1–6 before merge. Tests 4, 5, and 6 are the most likely to catch regressions.
+
+---
+
+## Out of scope for v1 verification
+- Performance testing (batch sizes are small; no performance benchmark required)
+- Security / penetration testing (no auth, no external network surface)
+- Cross-platform OS testing beyond the primary deployment OS
+- Export audit trail verification (feature not in v1)
+
+---
+
+## Notes for the agent
+- Do not call v1 done without both Phase 1 and Phase 2 complete.
+- Tests 4, 5, and 6 are must-pass, not nice-to-have. If any of these fail, v1 is not shippable.
+- User acceptance must use real production data — dev test data alone is not sufficient.
+- If a discrepancy is found in Phase 2, trace it back to the specific parser, DB write, or export query and fix at the source.

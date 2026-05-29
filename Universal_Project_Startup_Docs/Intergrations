@@ -1,0 +1,163 @@
+# INTEGRATIONS
+
+## Purpose of this document
+Define all integration points — how the app interacts with Trinity, the file system, export libraries, and any other external systems — including interfaces, constraints, and failure handling expectations.
+
+---
+
+## Guided fill status
+- Status: Complete
+- Last reviewed by: Project owner + AI
+- Source of truth: `BOOTSTRAP_QUESTIONNAIRE_APP.md`
+
+---
+
+## Integration overview
+
+| Integration | Direction | Interface | Required for v1? |
+|---|---|---|---|
+| File system (local) | Read | OS file path API | Yes |
+| File system (network) | Read | UNC / mapped drive path | Yes |
+| Trinity (SQLite + FastAPI) | Read + Write | Python library import | Yes |
+| Excel export (.xlsx) | Write | openpyxl or equivalent | Yes |
+| CSV export (.csv) | Write | Python csv stdlib or pandas | Yes |
+
+No external APIs, cloud services, or internet connections are required or used in v1.
+
+---
+
+## 1. File System Integration
+
+### Purpose
+Locate and read `.b` → `.d` → `target.rp` folder hierarchies for scanning and parsing.
+
+### Access modes
+- **Local path:** Standard OS file path (e.g. `C:\Data\Run001.b` on Windows, `/data/Run001.b` on Linux/Mac)
+- **Network path:** UNC paths (e.g. `\\server\share\Run001.b`) and mapped drive letters (e.g. `Z:\Run001.b`)
+
+### Operations
+- List contents of a directory
+- Check for existence of a folder or file
+- Open and read file contents from `target.rp`
+
+### Constraints
+- Read-only — the app never writes to the source file system
+- Must handle path-not-found gracefully (prompt user to verify path)
+- Must handle permission-denied gracefully (prompt user to check access)
+- Network path timeout behavior must be handled — do not hang indefinitely on unreachable paths
+
+### Failure handling
+| Failure | Expected behavior |
+|---|---|
+| `.b` path does not exist | Display error before scan begins; no scan starts |
+| `.b` path is not accessible (permission denied) | Display error before scan begins; no scan starts |
+| Network path becomes unavailable mid-scan | Flag affected `.d` folders as errored; continue with accessible folders; report in summary |
+| `.d` folder exists but `target.rp` is missing | Flag sample as `missing_target_rp`; continue scan |
+| `target.rp` file exists but cannot be read | Flag sample as `parse_error`; continue scan |
+
+---
+
+## 2. Trinity Integration
+
+### Purpose
+Persist all batch, sample, and compound data. Query data for display and export. Trinity is the canonical storage and database layer for the app.
+
+### Interface
+- **Type:** Python library import — Trinity is imported directly into the app's Python process
+- **Backend:** SQLite database managed by Trinity
+- **Transport:** No HTTP calls; no REST API; direct in-process library calls
+- **FastAPI:** Trinity's FastAPI layer serves the local HTML UI; it is the web layer for the app's frontend — not a separate microservice to call externally
+
+### Operations
+- Write: Create Batch, ScanVersion, Sample, Compound, CompoundInstance records on commit
+- Read: Query batches for display, history view, and export filtering
+- Read: Query samples and compound instances for export generation
+- Read: Query compound instances for U-Del detection count display
+
+### Versioning behavior
+- App checks if a `Batch` record exists for the scanned `.b` folder name before committing
+- If exists: creates new `ScanVersion` (N+1), updates `is_latest` on prior version
+- If new: creates `Batch` + first `ScanVersion`
+
+### Concurrency
+- SQLite supports multiple simultaneous readers without issue
+- Simultaneous writes (two users scanning different `.b` folders committing at the same time) require coordination:
+  - **Approach:** Use SQLite WAL (Write-Ahead Logging) mode for better concurrent read/write performance
+  - **Write serialization:** Wrap commit operations in a transaction with appropriate retry/backoff on lock contention
+  - **Scope:** Each commit is scoped to one `ScanVersion` — there is no cross-batch write dependency
+
+### Failure handling
+| Failure | Expected behavior |
+|---|---|
+| Trinity DB not initialized | App displays setup error; guides user to initialize DB |
+| Write lock timeout (concurrent commit) | Retry with backoff; if repeated failure, display error and do not partially commit |
+| Partial write (crash mid-commit) | SQLite transaction rollback ensures no partial state is committed |
+| DB file not found or inaccessible | Display error with path info; no operations proceed |
+
+---
+
+## 3. Excel Export (.xlsx)
+
+### Purpose
+Generate formatted Excel files containing compound data filtered by user-selected batches (or full DB).
+
+### Library
+- `openpyxl` (preferred) or equivalent
+- No dependency on Microsoft Excel being installed
+
+### Output format
+- File extension: `.xlsx`
+- Columns: Batch name, Sample folder name, Compound number, Compound name, U-Del comment, Is U-Del (boolean)
+- Summary row or sheet: U-Del detection count per compound per batch (derived at export time)
+- Formatting: Column headers bolded, column widths auto-sized to content, no conditional color formatting required in v1
+
+### Export scope
+- User selects one or more batches from a checklist, OR selects "Full DB Export"
+- Only the latest `ScanVersion` for each selected batch is included in the export (not historical versions)
+- User sees version number and scan date for each batch at selection time
+
+### Failure handling
+| Failure | Expected behavior |
+|---|---|
+| No batches selected | Export button disabled or grayed until selection is made |
+| Write permission error on output path | Display error with file path; allow user to choose different output location |
+| openpyxl not installed | App startup check; clear error message with install instructions |
+
+---
+
+## 4. CSV Export (.csv)
+
+### Purpose
+Generate plain-text CSV files for users who need raw tabular data for further processing.
+
+### Library
+- Python `csv` stdlib (no extra dependency)
+
+### Output format
+- File extension: `.csv`
+- Columns: same as Excel export (Batch name, Sample folder name, Compound number, Compound name, U-Del comment, Is U-Del)
+- No summary row (summary is Excel-only in v1, or separate CSV file if needed)
+- UTF-8 encoding
+
+### Export scope
+- Same filtering logic as Excel export (batch selection or full DB)
+
+---
+
+## 5. No external integrations in v1
+
+The following are explicitly out of scope:
+- LIMS systems
+- Cloud storage (S3, SharePoint, OneDrive, etc.)
+- Email or notification services
+- Authentication providers (LDAP, Active Directory, SSO)
+- Any external HTTP API
+
+---
+
+## Notes for the agent
+- Trinity is a library, not a service. Do not add HTTP client calls to interact with it.
+- All file system access is read-only. Never write to the source `.b` / `.d` folder hierarchy.
+- Export generation must query Trinity — do not re-scan the file system at export time.
+- SQLite WAL mode should be enabled at DB initialization for better concurrent access behavior.
+- Wrap all Trinity commit operations in transactions. Never allow partial writes.
