@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VOC Calibration Helper</title>
+  <title>GCMS Target RP Discovery</title>
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
@@ -12,8 +12,8 @@
   <div class="topbar-left">
     <div class="usgs-mark"></div>
     <div>
-      <span class="app-title">VOC Calibration Helper</span>
-      <span class="app-agency">National Water Quality Laboratory</span>
+      <span class="app-title">GCMS Target RP Discovery</span>
+      <span class="app-agency">GCMS Target RP Discovery</span>
     </div>
   </div>
   <div class="topbar-right"></div>
@@ -30,89 +30,13 @@
       <button class="btn-primary" id="load-btn">Load</button>
     </div>
     <div id="validation-msg" class="validation-msg"></div>
-  </div>
-
-  <div class="card">
-    <h3>Recent Batches</h3>
-    <div class="recent-filters" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-      <input type="text" id="filter-name" class="path-input" style="flex:1;min-width:120px;" placeholder="Batch name…" />
-      <input type="text" id="filter-user" class="path-input" style="flex:1;min-width:100px;" placeholder="Username…" />
-      <input type="date" id="filter-date-from" class="path-input" style="width:140px;" title="From date" />
-      <input type="date" id="filter-date-to" class="path-input" style="width:140px;" title="To date" />
-      <button class="btn-secondary" id="filter-btn">Filter</button>
-      <button class="btn-secondary" id="filter-clear-btn">Clear</button>
-    </div>
-    <div id="recent-runs-container">
-      <p class="text-muted">Loading&hellip;</p>
-    </div>
+    <pre id="load-result" style="display:none"></pre>
   </div>
 
 </div>
 
 <script src="/static/app.js"></script>
 <script>
-let _userId = "unknown";
-(async () => {
-  try { const d = await apiGet("/api/whoami"); if (d.username) _userId = d.username; } catch (_) {}
-})();
-
-async function loadRecentRuns(params) {
-  const container = document.getElementById("recent-runs-container");
-  try {
-    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
-    const runs = await apiGet("/api/runs/recent" + qs);
-    if (!runs.length) {
-      container.innerHTML = '<p class="text-muted">No recent batches.</p>';
-      return;
-    }
-    const thead = `<tr><th>Batch</th><th>User</th><th>Last Worked On</th><th></th></tr>`;
-    const rows = runs.map(r => `<tr>
-      <td>${escHtml(r.display_name)}</td>
-      <td>${escHtml(r.username)}</td>
-      <td>${escHtml(r.last_worked_on)}</td>
-      <td><button class="btn-resume" data-runid="${escHtml(r.run_id)}">Resume</button></td>
-    </tr>`).join("");
-    container.innerHTML = `<table class="data-table"><thead>${thead}</thead><tbody>${rows}</tbody></table>`;
-    container.querySelectorAll(".btn-resume").forEach(btn => {
-      btn.addEventListener("click", () => resumeRun(btn.dataset.runid));
-    });
-  } catch (e) {
-    container.innerHTML = '<p class="text-muted">Could not load recent batches.</p>';
-  }
-}
-
-function getFilterParams() {
-  const p = {};
-  const n = document.getElementById("filter-name").value.trim();
-  const u = document.getElementById("filter-user").value.trim();
-  const df = document.getElementById("filter-date-from").value;
-  const dt = document.getElementById("filter-date-to").value;
-  if (n) p.name = n;
-  if (u) p.username = u;
-  if (df) p.date_from = df;
-  if (dt) p.date_to = dt;
-  return Object.keys(p).length ? p : null;
-}
-
-document.getElementById("filter-btn").addEventListener("click", () => loadRecentRuns(getFilterParams()));
-document.getElementById("filter-clear-btn").addEventListener("click", () => {
-  document.getElementById("filter-name").value = "";
-  document.getElementById("filter-user").value = "";
-  document.getElementById("filter-date-from").value = "";
-  document.getElementById("filter-date-to").value = "";
-  loadRecentRuns(null);
-});
-
-async function resumeRun(displayId) {
-  setMsg("Resuming…", "");
-  try {
-    const data = await apiPost(`/api/runs/${encodeURIComponent(displayId)}/resume`, {});
-    window.location.href = `/calibration?run_id=${encodeURIComponent(data.run_id)}`;
-  } catch (e) {
-    setMsg(e.message || "Resume failed", "error");
-  }
-}
-
 document.getElementById("browse-btn").addEventListener("click", async () => {
   try {
     const { request_id } = await apiPost("/api/browse/open", {});
@@ -137,8 +61,11 @@ document.getElementById("load-btn").addEventListener("click", async () => {
     const vRes = await apiPost("/api/batch/validate", { batch_path: path });
     if (!vRes.valid) { setMsg(vRes.message || "Invalid path", "error"); return; }
     setMsg("Loading batch data…", "");
-    const lRes = await apiPost("/api/batch/load", { batch_path: path, user_id: _userId });
-    window.location.href = `/calibration?run_id=${encodeURIComponent(lRes.run_id)}`;
+    const lRes = await apiPost("/api/batch/load", { batch_path: path });
+    setMsg("Batch loaded successfully.", "");
+    const resultEl = document.getElementById("load-result");
+    resultEl.style.display = "block";
+    resultEl.textContent = JSON.stringify(lRes, null, 2);
   } catch (e) {
     setMsg(e.message || "Load failed.", "error");
   }
@@ -153,8 +80,6 @@ function setMsg(text, cls) {
 function escHtml(str) {
   return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
-
-loadRecentRuns();
 </script>
 </body>
 </html>
