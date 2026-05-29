@@ -1,0 +1,97 @@
+# ADR-0006 - Replace Streamlit with FastAPI Backend and HTML Browser Frontend
+
+## Status
+- Accepted
+- Supersedes: `ADR-0001 - Use a Thin Presentation Layer with Shared-Storage Deployment as the Near-Term Baseline.md`
+
+---
+
+## Decision
+
+Replace Streamlit as the presentation layer with a **FastAPI backend** serving a **plain HTML/CSS/JS frontend** accessed through a local browser.
+
+The workflow-governed Python application core, file-backed shared-storage persistence, and all other architectural commitments from ADR-0001 remain unchanged. This decision changes only the renderer and the client/server communication model.
+
+---
+
+## Context
+
+ADR-0001 accepted Streamlit as a pragmatic near-term renderer while explicitly framing it as a replaceable presentation choice. Its review trigger included: *"if the presentation layer begins constraining workflow correctness or maintainability."*
+
+Experience across projects using the same governed Python core has shown that Streamlit introduces recurring friction that is not present with a FastAPI + HTML approach:
+
+- Streamlit's rerun model requires persistent workarounds to prevent UI state from leaking into committed working state or route logic. Multiple RETROSPECTIVE and FAILURE_CATALOG entries in this project trace directly back to Streamlit's rerun/session behavior (action-widget snapshot hardening, Step 1 active-navigation persistence repair, snapshot key filtering).
+- Streamlit's session-state and widget-key model is a recurring source of bugs at exactly the save/resume, route-derivation, and explicit-commit boundaries this project most needs to protect.
+- Streamlit's deployment and packaging model adds complexity without providing meaningful workflow governance benefits.
+- FastAPI with a local HTML frontend has been validated in comparable projects as faster to set up, easier to reason about for client/server state boundaries, and free of the rerun quirks that generate state-drift defects in Streamlit.
+
+The Python application core — workflow services, persistence layer, lock management, review controls, audit logic, publish validation — does not change. FastAPI replaces Streamlit as the surface through which the browser calls that core. HTML/JS replaces Streamlit widgets as the rendering surface.
+
+---
+
+## Alternatives considered
+
+### Keep Streamlit and add more guards
+- Why considered: existing code exists; team has familiarity.
+- Why not chosen: the rerun-based state model is structurally misaligned with the explicit-commit, save-boundary, and route-from-persisted-truth requirements. Each new workflow surface requires defensive workarounds. The failure catalog entries in this project are evidence the approach does not converge.
+
+### Desktop-native client (e.g. Tkinter, PyQt, Electron wrapper)
+- Why considered: tighter local packaging, no browser dependency.
+- Why not chosen: higher packaging and maintenance burden. The browser is already available in the target environment, and a local FastAPI server provides the same offline/local-network operation without native packaging complexity.
+
+### Full hosted web stack (Django, cloud-hosted SPA)
+- Why considered: stronger long-term enterprise path.
+- Why not chosen: still inconsistent with the offline/local-network operating constraint and premature before the workflow model is fully stabilized. Deferred, not rejected.
+
+---
+
+## Why chosen
+
+FastAPI + local HTML browser satisfies every constraint that drove ADR-0001 while removing the structural friction Streamlit introduces:
+
+- **Offline/local-network capable**: FastAPI runs as a local process; the browser connects to localhost. No internet dependency.
+- **Shared-storage deployment compatible**: unchanged from ADR-0001.
+- **Thin presentation boundary preserved**: FastAPI route handlers are the thin boundary. All workflow logic, persistence, locking, review, and publish behavior remains in domain/service modules. The HTML frontend calls API endpoints; it does not own workflow decisions.
+- **Client/server state boundary is explicit**: HTTP request/response is a clear boundary. There is no framework-managed session-state object that silently survives reruns and corrupts workflow semantics.
+- **Easier to test**: FastAPI endpoints are standard Python callables testable with `httpx` or `pytest` without a running browser. UI layer tests do not require Streamlit's test harness.
+- **No rerun model**: the core failure pattern behind multiple Failure Catalog entries is eliminated structurally, not worked around.
+- **Launcher-compatible**: a small launcher script starts the FastAPI process and opens the browser. UX from the operator's perspective is unchanged.
+
+---
+
+## Consequences
+
+### What becomes easier
+- Save/resume, route derivation, and explicit-commit surfaces can be tested cleanly through API calls without fighting Streamlit session state.
+- New workflow screens are standard HTML pages backed by FastAPI endpoints, with no widget-key management or rerun filtering required.
+- The RETROSPECTIVE and FAILURE_CATALOG entries relating to Streamlit snapshot hardening, action-widget key filtering, and navigation-persistence workarounds become obsolete for new surfaces.
+- Frontend behavior is fully predictable: what the browser sends is what the server receives. No hidden rerun side effects.
+
+### What becomes harder
+- Existing Streamlit pages must be migrated. This is a deliberate rebuild, not a free upgrade.
+- HTML/JS frontend development requires different skills than Streamlit widget composition.
+- The team must maintain discipline to keep workflow logic in FastAPI service/domain modules rather than drifting it into route handlers (same discipline rule as before, now stated for the new layer).
+
+### What is unchanged
+- Python application core: all workflow services, persistence, lock management, review controls, publish validation, and audit logic.
+- File-backed shared-storage persistence model (ADR-0002).
+- Single-editor concurrency model (ADR-0003).
+- Published evidence immutability and reopen policy (ADR-0004).
+- Admin challenge model (ADR-0005).
+- All workflow timeline, data model, and state classification commitments.
+
+### Architectural rules this ADR adds
+- FastAPI route handlers are presentation-layer thin. They receive requests, call domain/service modules, and return responses. They do not own workflow decisions, persistence logic, or authorization rules.
+- HTML/JS frontend is a renderer only. It does not hold workflow truth between page loads except through explicit API calls.
+- All session/auth state that must survive across requests must be handled explicitly (token, cookie, or server-side session object) — not assumed to exist in a framework-managed session store.
+- The UI framework must remain replaceable. FastAPI is now the accepted backend; HTML is the accepted frontend. Neither is the architecture.
+
+---
+
+## Review trigger
+
+Revisit this ADR if any of the following become true:
+- enterprise hosting or a managed cloud backend becomes available and the workflow model is stable enough to justify migration
+- simultaneous multi-user collaboration becomes a real requirement
+- the team decides to adopt a richer frontend framework (React, Vue) while preserving the FastAPI backend
+- the local-browser deployment model becomes operationally unacceptable for the target environment
